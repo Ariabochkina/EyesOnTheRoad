@@ -6,57 +6,27 @@ using UnityEngine.Splines;
 public class SplineDriver : MonoBehaviour
 {
     [Header("Дорога")]
-    [Tooltip("Объект со компонентом Spline Container. Перетащи его сюда из окна Hierarchy.")]
     [SerializeField] SplineContainer road;
-
-    [Tooltip("Для пробного круга: в конце пути машина снова оказывается в начале. На настоящей трассе курсовой галочку снять.")]
     [SerializeField] bool loop = true;
 
     [Header("Скорость")]
-    [Tooltip("Максимум в м/с. 33.3 ≈ 120 км/ч.")]
     [SerializeField] float maxSpeed = 33.3f;
-
-    [Tooltip("Ускорение в м/с². Около 0.3 g — разгон легковушки без гонки.")]
     [SerializeField] float acceleration = 3.2f;
-
-    [Tooltip("Торможение в м/с² при зажатой S. Около 0.65 g.")]
     [SerializeField] float braking = 6.5f;
-
-    [Tooltip("Замедление без газа и тормоза. 0 = скорость держится, как раньше. Больше нуля — сама ползёт вниз.")]
     [SerializeField] float coastDeceleration = 0f;
 
     [Header("Полоса")]
-    [Tooltip("Максимальный съезд влево и вправо от линии сплайна, в метрах.")]
     [SerializeField] float maxLaneOffset = 3f;
-
-    [Tooltip("Скорость перестроения на месте, м/с. На высокой скорости скрипт сам чуть снижает отзыв.")]
     [SerializeField] float laneMoveSpeed = 2.2f;
-
-    [Tooltip("Сглаживание перестроения в секундах. Больше — мягче.")]
     [SerializeField] float laneSmoothTime = 0.35f;
 
     [Header("Камера")]
-    [Tooltip("Камера внутри или над кубом. Она должна быть дочерней к этому объекту. Пустое поле скрипт попробует заполнить сам.")]
     [SerializeField] Transform cabinCamera;
-
-    [Tooltip("Вертикальное покачивание в метрах.")]
     [SerializeField] float bobAmplitude = 0.004f;
-
-    [Tooltip("Частота покачивания в герцах на полной скорости.")]
     [SerializeField] float bobFrequency = 0.55f;
-
-    [Tooltip("Максимальный наклон камеры при уходе в сторону, в градусах.")]
     [SerializeField] float maxRollDegrees = 0.35f;
-
-    [Tooltip("Максимальный кивок камеры при газе и торможении, в градусах.")]
     [SerializeField] float maxPitchDegrees = 0.25f;
-
-    [Tooltip("Насколько быстро камера догоняет нужный наклон, в секундах.")]
     [SerializeField] float cameraSwaySmoothTime = 0.35f;
-
-    [Header("Отладка")]
-    [Tooltip("Надпись скорости в углу Game. К игроку в курсовой это не относится.")]
-    [SerializeField] bool showSpeed = true;
 
     float speed;
     float distanceAlongRoad;
@@ -75,12 +45,6 @@ public class SplineDriver : MonoBehaviour
     Quaternion cameraRestRotation;
     bool cameraRestCached;
 
-    bool missingRoadWarningShown;
-    bool openSplineWarningShown;
-    bool scaleWarningShown;
-
-    GUIStyle speedStyle;
-
     public float Speed => speed;
     public float DistanceAlongRoad => distanceAlongRoad;
     public float LaneOffset => laneOffset;
@@ -98,18 +62,15 @@ public class SplineDriver : MonoBehaviour
     void Start()
     {
         CacheCameraRest();
-
-        if (TryGetComponent<Rigidbody>(out _))
-        {
-            Debug.LogWarning(
-                "SplineDriver: на кубе есть Rigidbody. Удали этот компонент. Машина едет скриптом, без физики колёс.",
-                this);
-        }
     }
 
     void Update()
     {
-        if (!TryGetRoad(out float roadLength))
+        if (road == null || road.Spline == null || road.Spline.Count < 2)
+            return;
+
+        float roadLength = road.CalculateLength();
+        if (roadLength < 1f)
             return;
 
         ReadDrivingInput(out float throttle, out float laneAxis);
@@ -124,72 +85,6 @@ public class SplineDriver : MonoBehaviour
         ApplyCameraSway();
         previousSpeed = speed;
         previousLaneOffset = laneOffset;
-    }
-
-    void OnGUI()
-    {
-        if (!showSpeed)
-            return;
-
-        if (speedStyle == null)
-        {
-            speedStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 18
-            };
-            speedStyle.normal.textColor = Color.white;
-        }
-
-        float kmh = speed * 3.6f;
-        GUI.Label(new Rect(16f, 16f, 520f, 32f), $"Скорость: {kmh:0} км/ч    путь: {distanceAlongRoad:0} м", speedStyle);
-    }
-
-    bool TryGetRoad(out float roadLength)
-    {
-        roadLength = 0f;
-
-        if (road == null || road.Spline == null || road.Spline.Count < 2)
-        {
-            WarnOnce(
-                ref missingRoadWarningShown,
-                "SplineDriver: в поле Road ничего нет, или на сплайне меньше двух узлов. Перетащи объект Road в это поле.");
-            return false;
-        }
-
-        Vector3 scale = road.transform.lossyScale;
-        if (Mathf.Abs(scale.x - 1f) > 0.02f || Mathf.Abs(scale.y - 1f) > 0.02f || Mathf.Abs(scale.z - 1f) > 0.02f)
-        {
-            WarnOnce(
-                ref scaleWarningShown,
-                "SplineDriver: у объекта Road масштаб должен остаться 1, 1, 1. Иначе скорость и ширина дороги разъедутся.");
-        }
-
-        roadLength = road.CalculateLength();
-        if (roadLength < 1f)
-        {
-            WarnOnce(
-                ref missingRoadWarningShown,
-                "SplineDriver: сплайн короче метра. Разведи узлы на сотни метров, иначе круга не получится.");
-            return false;
-        }
-
-        if (loop && !road.Spline.Closed)
-        {
-            WarnOnce(
-                ref openSplineWarningShown,
-                "SplineDriver: сплайн не замкнут. На стыке конца и начала машину перенесёт в начало. У Spline Container включи Closed.");
-        }
-
-        return true;
-    }
-
-    static void WarnOnce(ref bool alreadyShown, string message)
-    {
-        if (alreadyShown)
-            return;
-
-        alreadyShown = true;
-        Debug.LogWarning(message);
     }
 
     void ReadDrivingInput(out float throttle, out float laneAxis)
