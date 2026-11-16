@@ -69,6 +69,8 @@ public class SimpleDialogueRunner : MonoBehaviour
     public Choice? LastChoice { get; private set; }
     public bool IsOpen => isOpen;
 
+    public event System.Action<Choice> ChoiceMade;
+
     void Awake()
     {
         labels = new[] { answerLabel1, answerLabel2, answerLabel3 };
@@ -130,11 +132,11 @@ public class SimpleDialogueRunner : MonoBehaviour
             SetSelection(selectedIndex + 1);
 
         if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame)
-            SetSelection(0);
+            OnAnswerClicked(0);
         else if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame)
-            SetSelection(1);
+            OnAnswerClicked(1);
         else if (keyboard.digit3Key.wasPressedThisFrame || keyboard.numpad3Key.wasPressedThisFrame)
-            SetSelection(2);
+            OnAnswerClicked(2);
 
         if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
             ConfirmSelection();
@@ -229,6 +231,8 @@ public class SimpleDialogueRunner : MonoBehaviour
 
         if (panel != null)
             panel.SetActive(false);
+
+        ChoiceMade?.Invoke(choice);
     }
 
     void SetSelection(int index)
