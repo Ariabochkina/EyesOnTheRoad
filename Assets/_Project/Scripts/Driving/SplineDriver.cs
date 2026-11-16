@@ -48,6 +48,51 @@ public class SplineDriver : MonoBehaviour
     public float Speed => speed;
     public float DistanceAlongRoad => distanceAlongRoad;
     public float LaneOffset => laneOffset;
+    public SplineContainer Road => road;
+    public bool Loop => loop;
+
+    public float RoadLength
+    {
+        get
+        {
+            if (road == null || road.Spline == null || road.Spline.Count < 2)
+                return 0f;
+            return road.CalculateLength();
+        }
+    }
+
+    public bool TryEvaluateAtDistance(float distance, out Vector3 position, out Vector3 tangent, out Vector3 up)
+    {
+        position = default;
+        tangent = Vector3.forward;
+        up = Vector3.up;
+
+        float length = RoadLength;
+        if (length < 1f)
+            return false;
+
+        float use = loop ? Mathf.Repeat(distance, length) : Mathf.Clamp(distance, 0f, length);
+        float t = SplineUtility.ConvertIndexUnit(
+            road.Spline,
+            use,
+            PathIndexUnit.Distance,
+            PathIndexUnit.Normalized);
+
+        if (float.IsNaN(t) || float.IsInfinity(t))
+            return false;
+
+        if (!road.Evaluate(t, out float3 worldPosition, out float3 worldTangent, out float3 worldUp))
+            return false;
+
+        position = worldPosition;
+        tangent = worldTangent;
+        if (tangent.sqrMagnitude > 0.0001f)
+            tangent.Normalize();
+        up = worldUp;
+        if (up.sqrMagnitude > 0.0001f)
+            up.Normalize();
+        return true;
+    }
 
     void Awake()
     {
