@@ -45,17 +45,23 @@ public class DialogueStackLayout : MonoBehaviour
 
         float speakerH = Mathf.Max(speakerText.preferredHeight + speakerExtraHeight, speakerText.fontSize * 1.2f);
 
+        bool answersVisible = answersRoot.gameObject.activeSelf;
         int answerCount = 0;
-        for (int i = 0; i < answersRoot.childCount; i++)
+        if (answersVisible)
         {
-            if (answersRoot.GetChild(i).gameObject.activeSelf)
-                answerCount++;
+            for (int i = 0; i < answersRoot.childCount; i++)
+            {
+                if (answersRoot.GetChild(i).gameObject.activeSelf)
+                    answerCount++;
+            }
+
+            if (answerCount < 1)
+                answerCount = 3;
         }
 
-        if (answerCount < 1)
-            answerCount = 3;
-
-        float answersH = answerCount * answerHeight + (answerCount - 1) * itemSpacing;
+        float answersH = answersVisible
+            ? answerCount * answerHeight + Mathf.Max(0, answerCount - 1) * itemSpacing
+            : 0f;
         float timerH = timerFill != null ? Mathf.Max(1f, timerHeight) : 0f;
         float timerW = Mathf.Max(1f, timerWidth);
         float timerGap = timerFill != null ? gapBeforeTimer : 0f;
@@ -72,28 +78,31 @@ public class DialogueStackLayout : MonoBehaviour
             y += timerH + timerGap;
         }
 
-        answersRoot.anchorMin = new Vector2(0.5f, 0f);
-        answersRoot.anchorMax = new Vector2(0.5f, 0f);
-        answersRoot.pivot = new Vector2(0.5f, 0f);
-        answersRoot.sizeDelta = new Vector2(stackWidth, answersH);
-        answersRoot.anchoredPosition = new Vector2(0f, y);
-
-        int visible = 0;
-        for (int i = 0; i < answersRoot.childCount; i++)
+        if (answersVisible)
         {
-            RectTransform child = answersRoot.GetChild(i) as RectTransform;
-            if (child == null || !child.gameObject.activeSelf)
-                continue;
+            answersRoot.anchorMin = new Vector2(0.5f, 0f);
+            answersRoot.anchorMax = new Vector2(0.5f, 0f);
+            answersRoot.pivot = new Vector2(0.5f, 0f);
+            answersRoot.sizeDelta = new Vector2(stackWidth, answersH);
+            answersRoot.anchoredPosition = new Vector2(0f, y);
 
-            child.anchorMin = new Vector2(0.5f, 1f);
-            child.anchorMax = new Vector2(0.5f, 1f);
-            child.pivot = new Vector2(0.5f, 1f);
-            child.sizeDelta = new Vector2(stackWidth, answerHeight);
-            child.anchoredPosition = new Vector2(0f, -visible * (answerHeight + itemSpacing));
-            visible++;
+            int visible = 0;
+            for (int i = 0; i < answersRoot.childCount; i++)
+            {
+                RectTransform child = answersRoot.GetChild(i) as RectTransform;
+                if (child == null || !child.gameObject.activeSelf)
+                    continue;
+
+                child.anchorMin = new Vector2(0.5f, 1f);
+                child.anchorMax = new Vector2(0.5f, 1f);
+                child.pivot = new Vector2(0.5f, 1f);
+                child.sizeDelta = new Vector2(stackWidth, answerHeight);
+                child.anchoredPosition = new Vector2(0f, -visible * (answerHeight + itemSpacing));
+                visible++;
+            }
+
+            y += answersH + itemSpacing;
         }
-
-        y += answersH + itemSpacing;
 
         speakerBlock.anchorMin = new Vector2(0.5f, 0f);
         speakerBlock.anchorMax = new Vector2(0.5f, 0f);

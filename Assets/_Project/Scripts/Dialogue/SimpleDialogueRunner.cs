@@ -15,11 +15,15 @@ public class SimpleDialogueRunner : MonoBehaviour
         Silence = 3
     }
 
+    [Header("Связь")]
+    [SerializeField] CompanionEmotions emotions;
+
     [Header("UI")]
     [SerializeField] GameObject panel;
     [SerializeField] TextMeshProUGUI speakerText;
     [SerializeField] SpeakerLineBackdrops speakerBackdrops;
     [SerializeField] DialogueStackLayout stackLayout;
+    [SerializeField] RectTransform answersRoot;
     [SerializeField] Button answerButton1;
     [SerializeField] Button answerButton2;
     [SerializeField] Button answerButton3;
@@ -45,36 +49,38 @@ public class SimpleDialogueRunner : MonoBehaviour
 
     [Header("Таймер")]
     [SerializeField] float replySeconds = 12f;
-    [SerializeField] float startDelaySeconds = 4f;
+    [SerializeField] float remarkSeconds = 7f;
 
-    [Header("Тест")]
+    [Header("Старт")]
+    [SerializeField] DialogueEpisode introEpisode;
+    [SerializeField] float startDelaySeconds = 4f;
     [SerializeField] bool startAutomatically = true;
     [SerializeField] Key replayKey = Key.T;
 
-    const string SpeakerLine = "Ночью по этой трассе редко кто едет. Ты часто так поздно за рулём?";
-    const string Answer1 = "Иногда. Главное - доехать.";
-    const string Answer2 = "Не люблю болтать за рулём.";
-    const string Answer3 = "А ты?";
-
-    readonly string[] answers = { Answer1, Answer2, Answer3 };
     TextMeshProUGUI[] labels;
     Button[] buttons;
 
-    bool isOpen;
+    DialogueEpisode episode;
+    DialogueLine line;
+    int lineIndex;
+    float lineSeconds;
     float timeLeft;
     float startTimer;
     bool autoStartArmed;
     int selectedIndex;
 
-    public Choice? LastChoice { get; private set; }
-    public bool IsOpen => isOpen;
+    public bool IsOpen => episode != null;
 
-    public event System.Action<Choice> ChoiceMade;
+    public event System.Action<DialogueLine, Choice> ChoiceMade;
+    public event System.Action<DialogueEpisode> EpisodeFinished;
 
     void Awake()
     {
         labels = new[] { answerLabel1, answerLabel2, answerLabel3 };
         buttons = new[] { answerButton1, answerButton2, answerButton3 };
+
+        if (emotions == null)
+            emotions = FindAnyObjectByType<CompanionEmotions>();
 
         if (stackLayout == null && panel != null)
             stackLayout = panel.GetComponent<DialogueStackLayout>();
@@ -103,15 +109,15 @@ public class SimpleDialogueRunner : MonoBehaviour
             if (startTimer <= 0f)
             {
                 autoStartArmed = false;
-                Open();
+                Play(introEpisode);
             }
         }
 
         Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard[replayKey].wasPressedThisFrame && !isOpen)
-            Open();
+        if (keyboard != null && keyboard[replayKey].wasPressedThisFrame && !IsOpen)
+            Play(introEpisode);
 
-        if (!isOpen)
+        if (line == null)
             return;
 
         timeLeft -= Time.deltaTime;
@@ -119,11 +125,14 @@ public class SimpleDialogueRunner : MonoBehaviour
 
         if (timeLeft <= 0f)
         {
-            Close(Choice.Silence);
+            if (line.HasAnswers)
+                Resolve(Choice.Silence);
+            else
+                ShowNextLine();
             return;
         }
 
-        if (keyboard == null)
+        if (!line.HasAnswers || keyboard == null)
             return;
 
         if (keyboard.upArrowKey.wasPressedThisFrame)
@@ -139,7 +148,88 @@ public class SimpleDialogueRunner : MonoBehaviour
             OnAnswerClicked(2);
 
         if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
-            ConfirmSelection();
+            Resolve((Choice)selectedIndex);
+    }
+
+    public void Play(DialogueEpisode next)
+    {
+        if (next == null || next.lines == null || next.lines.Count == 0)
+        {
+            Debug.LogWarning("Диалог: эпизод не назначен или пустой.");
+            return;
+        }
+
+        if (IsOpen || panel == null || speakerText == null)
+            return;
+
+        episode = next;
+        lineIndex = -1;
+        ApplyTypography();
+        panel.SetActive(true);
+        ShowNextLine();
+    }
+
+    void ShowNextLine()
+    {
+        lineIndex++;
+        if (lineIndex >= episode.lines.Count)
+        {
+            FinishEpisode();
+            return;
+        }
+
+        line = episode.lines[lineIndex];
+        selectedIndex = 0;
+        float seconds = line.seconds > 0f ? line.seconds : (line.HasAnswers ? replySeconds : remarkSeconds);
+        lineSeconds = Mathf.Max(0.1f, seconds);
+        timeLeft = lineSeconds;
+
+        CompanionEmotions.State state = emotions != null ? emotions.CurrentState : CompanionEmotions.State.Indifferent;
+        speakerText.text = line.TextFor(state);
+        ShowAnswers();
+
+        RebuildLayout();
+        RefreshTimerVisual();
+        StartCoroutine(RebuildLayoutNextFrame());
+    }
+
+    void Resolve(Choice choice)
+    {
+        if (line == null)
+            return;
+
+        ChoiceMade?.Invoke(line, choice);
+        ShowNextLine();
+    }
+
+    void FinishEpisode()
+    {
+        DialogueEpisode finished = episode;
+        episode = null;
+        line = null;
+        timeLeft = 0f;
+
+        if (panel != null)
+            panel.SetActive(false);
+
+        EpisodeFinished?.Invoke(finished);
+    }
+
+    void ShowAnswers()
+    {
+        int count = line.AnswerCount;
+
+        if (answersRoot != null)
+            answersRoot.gameObject.SetActive(count > 0);
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null)
+                buttons[i].gameObject.SetActive(i < count);
+        }
+
+        if (count > 0)
+            RefreshAnswerVisuals();
     }
 
     void WireButtons()
@@ -162,7 +252,7 @@ public class SimpleDialogueRunner : MonoBehaviour
             var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
             enter.callback.AddListener(_ =>
             {
-                if (isOpen)
+                if (line != null && index < line.AnswerCount)
                     SetSelection(index);
             });
             trigger.triggers.Add(enter);
@@ -171,97 +261,40 @@ public class SimpleDialogueRunner : MonoBehaviour
 
     void OnAnswerClicked(int index)
     {
-        if (!isOpen)
+        if (line == null || index >= line.AnswerCount)
             return;
 
         if (selectedIndex == index)
-            ConfirmSelection();
+            Resolve((Choice)index);
         else
             SetSelection(index);
     }
 
-    public void Open()
-    {
-        if (panel == null || speakerText == null)
-            return;
-
-        LastChoice = null;
-        isOpen = true;
-        selectedIndex = 0;
-        timeLeft = Mathf.Max(0.1f, replySeconds);
-
-        ApplyTypography();
-        speakerText.text = SpeakerLine;
-        panel.SetActive(true);
-
-        Canvas.ForceUpdateCanvases();
-        if (stackLayout != null)
-            stackLayout.Rebuild();
-        if (speakerBackdrops != null)
-            speakerBackdrops.Rebuild();
-
-        RefreshAnswerVisuals();
-        RefreshTimerVisual();
-        StartCoroutine(RebuildBackdropsNextFrame());
-    }
-
-    System.Collections.IEnumerator RebuildBackdropsNextFrame()
-    {
-        yield return null;
-        Canvas.ForceUpdateCanvases();
-        if (stackLayout != null)
-            stackLayout.Rebuild();
-        if (speakerBackdrops != null)
-            speakerBackdrops.Rebuild();
-    }
-
-    void ConfirmSelection()
-    {
-        Close((Choice)selectedIndex);
-    }
-
-    void Close(Choice choice)
-    {
-        if (!isOpen)
-            return;
-
-        isOpen = false;
-        LastChoice = choice;
-        timeLeft = 0f;
-
-        if (panel != null)
-            panel.SetActive(false);
-
-        ChoiceMade?.Invoke(choice);
-    }
-
     void SetSelection(int index)
     {
-        selectedIndex = (index % answers.Length + answers.Length) % answers.Length;
+        int count = line.AnswerCount;
+        if (count == 0)
+            return;
+
+        selectedIndex = (index % count + count) % count;
         RefreshAnswerVisuals();
     }
 
     void RefreshAnswerVisuals()
     {
-        for (int i = 0; i < answers.Length; i++)
+        for (int i = 0; i < line.AnswerCount; i++)
         {
             if (labels[i] == null)
                 continue;
 
             bool selected = i == selectedIndex;
             string number = (i + 1).ToString();
-            string numberPart = selected
-                ? $"<color=#{ColorUtility.ToHtmlStringRGBA(numberSelectedColor)}>{number}</color>"
-                : $"<color=#{ColorUtility.ToHtmlStringRGBA(numberIdleColor)}>{number}</color>";
+            string numberColor = ColorUtility.ToHtmlStringRGBA(selected ? numberSelectedColor : numberIdleColor);
             string bodyColor = ColorUtility.ToHtmlStringRGBA(selected ? answerSelectedColor : answerIdleColor);
-            string answerCaps = answers[i].ToUpper(CultureInfo.GetCultureInfo("ru-RU"));
+            string answerCaps = (line.answers[i].text ?? string.Empty).ToUpper(CultureInfo.GetCultureInfo("ru-RU"));
 
             labels[i].richText = true;
-            labels[i].alignment = TextAlignmentOptions.Left;
-            labels[i].fontSize = answerFontSize;
-            if (answerFont != null)
-                labels[i].font = answerFont;
-            labels[i].text = $"{numberPart}  <color=#{bodyColor}>{answerCaps}</color>";
+            labels[i].text = $"<color=#{numberColor}>{number}</color>  <color=#{bodyColor}>{answerCaps}</color>";
             labels[i].color = Color.white;
         }
     }
@@ -288,12 +321,26 @@ public class SimpleDialogueRunner : MonoBehaviour
         }
     }
 
+    void RebuildLayout()
+    {
+        Canvas.ForceUpdateCanvases();
+        if (stackLayout != null)
+            stackLayout.Rebuild();
+        if (speakerBackdrops != null)
+            speakerBackdrops.Rebuild();
+    }
+
+    System.Collections.IEnumerator RebuildLayoutNextFrame()
+    {
+        yield return null;
+        RebuildLayout();
+    }
+
     void RefreshTimerVisual()
     {
         if (timerFill == null)
             return;
 
-        float total = Mathf.Max(0.1f, replySeconds);
-        timerFill.fillAmount = Mathf.Clamp01(timeLeft / total);
+        timerFill.fillAmount = Mathf.Clamp01(timeLeft / lineSeconds);
     }
 }

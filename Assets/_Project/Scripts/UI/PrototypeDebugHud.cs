@@ -35,13 +35,15 @@ public class PrototypeDebugHud : MonoBehaviour
         };
         style.normal.textColor = Color.white;
 
+        float distance = driver != null ? driver.DistanceAlongRoad : 0f;
         string text =
             $"Скорость: {kmh:0} км/ч\n" +
+            $"Дистанция: {distance:0} м\n" +
             $"Расположение: {affinity}\n" +
             $"Накал: {tension}\n" +
             $"Состояние: {state}\n" +
             "5–8: сменить состояние";
 
-        GUI.Box(new Rect(16f, 16f, 440f, 220f), text, style);
+        GUI.Box(new Rect(16f, 16f, 460f, 250f), text, style);
     }
 }

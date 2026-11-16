@@ -22,12 +22,6 @@ public class CompanionEmotions : MonoBehaviour
     [SerializeField] float highEnter = 70f;
     [SerializeField] float highExit = 55f;
 
-    [Header("Дельты диалога")]
-    [SerializeField] Vector2 answer1Delta = new Vector2(3f, -2f);
-    [SerializeField] Vector2 answer2Delta = new Vector2(-4f, 3f);
-    [SerializeField] Vector2 answer3Delta = new Vector2(5f, 1f);
-    [SerializeField] Vector2 silenceDelta = new Vector2(0f, 4f);
-
     float affinity;
     float tension;
     bool affinityHigh;
@@ -37,6 +31,8 @@ public class CompanionEmotions : MonoBehaviour
     public float Affinity => affinity;
     public float Tension => tension;
     public State CurrentState => state;
+    public bool AffinityHigh => affinityHigh;
+    public bool TensionHigh => tensionHigh;
 
     void Awake()
     {
@@ -119,15 +115,9 @@ public class CompanionEmotions : MonoBehaviour
         Debug.Log($"Эмоции: принудительно → {StateLabel(state)}");
     }
 
-    void OnChoiceMade(SimpleDialogueRunner.Choice choice)
+    void OnChoiceMade(DialogueLine line, SimpleDialogueRunner.Choice choice)
     {
-        Vector2 delta = choice switch
-        {
-            SimpleDialogueRunner.Choice.Answer1 => answer1Delta,
-            SimpleDialogueRunner.Choice.Answer2 => answer2Delta,
-            SimpleDialogueRunner.Choice.Answer3 => answer3Delta,
-            _ => silenceDelta
-        };
+        Vector2 delta = line.ShiftFor(choice);
 
         string choiceLabel = choice == SimpleDialogueRunner.Choice.Silence
             ? "молчание"
