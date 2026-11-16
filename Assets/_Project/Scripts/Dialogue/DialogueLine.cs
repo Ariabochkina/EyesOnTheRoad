@@ -41,10 +41,10 @@ public class DialogueLine
         return string.IsNullOrWhiteSpace(variant) ? text : variant;
     }
 
-    public Vector2 ShiftFor(SimpleDialogueRunner.Choice choice)
+    public Vector2 ShiftFor(DialogueRunner.Choice choice)
     {
         int index = (int)choice;
-        if (choice == SimpleDialogueRunner.Choice.Silence || index >= AnswerCount)
+        if (choice == DialogueRunner.Choice.Silence || index >= AnswerCount)
             return new Vector2(silenceAffinity, silenceTension);
 
         DialogueAnswer answer = answers[index];

@@ -12,7 +12,7 @@ public class CompanionEmotions : MonoBehaviour
     }
 
     [Header("Связь")]
-    [SerializeField] SimpleDialogueRunner dialogue;
+    [SerializeField] DialogueRunner dialogue;
 
     [Header("Старт")]
     [SerializeField] float startAffinity = 50f;
@@ -37,7 +37,7 @@ public class CompanionEmotions : MonoBehaviour
     void Awake()
     {
         if (dialogue == null)
-            dialogue = FindAnyObjectByType<SimpleDialogueRunner>();
+            dialogue = FindAnyObjectByType<DialogueRunner>();
 
         ResetToStart();
     }
@@ -115,11 +115,11 @@ public class CompanionEmotions : MonoBehaviour
         Debug.Log($"Эмоции: принудительно → {StateLabel(state)}");
     }
 
-    void OnChoiceMade(DialogueLine line, SimpleDialogueRunner.Choice choice)
+    void OnChoiceMade(DialogueLine line, DialogueRunner.Choice choice)
     {
         Vector2 delta = line.ShiftFor(choice);
 
-        string choiceLabel = choice == SimpleDialogueRunner.Choice.Silence
+        string choiceLabel = choice == DialogueRunner.Choice.Silence
             ? "молчание"
             : $"ответ {(int)choice + 1}";
 

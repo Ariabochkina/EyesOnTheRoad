@@ -5,7 +5,7 @@ public class RoadEventDirector : MonoBehaviour
 {
     [Header("Связь")]
     [SerializeField] SplineDriver driver;
-    [SerializeField] SimpleDialogueRunner dialogue;
+    [SerializeField] DialogueRunner dialogue;
     [SerializeField] CompanionEmotions emotions;
     [SerializeField] AudioSource radioSource;
 
@@ -25,14 +25,13 @@ public class RoadEventDirector : MonoBehaviour
 
     bool radioDone;
     bool personDone;
-    bool loggedPersonWaiting;
 
     void Awake()
     {
         if (driver == null)
             driver = FindAnyObjectByType<SplineDriver>();
         if (dialogue == null)
-            dialogue = FindAnyObjectByType<SimpleDialogueRunner>();
+            dialogue = FindAnyObjectByType<DialogueRunner>();
         if (emotions == null)
             emotions = FindAnyObjectByType<CompanionEmotions>();
 
@@ -52,15 +51,16 @@ public class RoadEventDirector : MonoBehaviour
 
     void Update()
     {
-        if (driver == null || dialogue == null || dialogue.IsOpen)
+        if (driver == null || dialogue == null)
             return;
 
         float distance = driver.DistanceAlongRoad;
 
         if (!radioDone && distance >= radioDistance)
             FireRadio();
-        else if (!personDone && distance >= roadsidePersonDistance)
-            TryFireRoadsidePerson();
+
+        if (!personDone && distance >= roadsidePersonDistance)
+            FireRoadsidePerson();
     }
 
     void FireRadio()
@@ -75,22 +75,19 @@ public class RoadEventDirector : MonoBehaviour
             radioSource.Play();
         }
 
-        dialogue.Play(radioEpisode);
+        StartCoroutine(PlayWhenFree(radioEpisode));
     }
 
-    void TryFireRoadsidePerson()
+    void FireRoadsidePerson()
     {
+        personDone = true;
+
         if (emotions == null || !emotions.TensionHigh)
         {
-            if (!loggedPersonWaiting)
-            {
-                Debug.Log("Событие: человек на дороге ждёт высокого накала.");
-                loggedPersonWaiting = true;
-            }
+            Debug.Log("Событие: человек на дороге пропущен (накал не высокий).");
             return;
         }
 
-        personDone = true;
         Debug.Log("Событие: человек на дороге");
         StartCoroutine(RoadsidePersonRoutine());
     }
@@ -104,11 +101,15 @@ public class RoadEventDirector : MonoBehaviour
             personVisual.SetActive(false);
 
         yield return new WaitForSeconds(pauseAfterScreamer);
+        yield return PlayWhenFree(roadsidePersonEpisode);
+    }
 
+    IEnumerator PlayWhenFree(DialogueEpisode episode)
+    {
         while (dialogue.IsOpen)
             yield return null;
 
-        dialogue.Play(roadsidePersonEpisode);
+        dialogue.Play(episode);
     }
 
     void ShowPersonAhead()

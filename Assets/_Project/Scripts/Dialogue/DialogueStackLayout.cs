@@ -62,13 +62,14 @@ public class DialogueStackLayout : MonoBehaviour
         float answersH = answersVisible
             ? answerCount * answerHeight + Mathf.Max(0, answerCount - 1) * itemSpacing
             : 0f;
-        float timerH = timerFill != null ? Mathf.Max(1f, timerHeight) : 0f;
+        bool timerVisible = timerFill != null && timerFill.gameObject.activeSelf;
+        float timerH = timerVisible ? Mathf.Max(1f, timerHeight) : 0f;
         float timerW = Mathf.Max(1f, timerWidth);
-        float timerGap = timerFill != null ? gapBeforeTimer : 0f;
+        float timerGap = timerVisible ? gapBeforeTimer : 0f;
 
         float y = bottomMargin;
 
-        if (timerFill != null)
+        if (timerVisible)
         {
             timerFill.anchorMin = new Vector2(0.5f, 0f);
             timerFill.anchorMax = new Vector2(0.5f, 0f);

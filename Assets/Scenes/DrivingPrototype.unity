@@ -736,6 +736,7 @@ GameObject:
   - component: {fileID: 525681515}
   - component: {fileID: 525681514}
   - component: {fileID: 525681516}
+  - component: {fileID: 525681517}
   m_Layer: 5
   m_Name: DialoguePanel
   m_TagString: Untagged
@@ -795,6 +796,40 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &525681517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525681512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a63a6e336093422a8d2d6220b30b34f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueView
+  speakerText: {fileID: 2013800984}
+  speakerBackdrops: {fileID: 1476125632}
+  stackLayout: {fileID: 525681516}
+  answersRoot: {fileID: 815314339}
+  answerButtons:
+  - {fileID: 511298142}
+  - {fileID: 1531686293}
+  - {fileID: 1369487098}
+  answerLabels:
+  - {fileID: 1253749383}
+  - {fileID: 836155615}
+  - {fileID: 805584029}
+  timerFill: {fileID: 1293827104}
+  speakerColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
+  answerIdleColor: {r: 0.62, g: 0.52, b: 0.22, a: 0.95}
+  answerSelectedColor: {r: 0.92, g: 0.82, b: 0.38, a: 1}
+  numberIdleColor: {r: 0.55, g: 0.48, b: 0.22, a: 0.9}
+  numberSelectedColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
+  speakerFont: {fileID: 11400000, guid: d73105629c20b244184ea6cb338f82cb, type: 2}
+  answerFont: {fileID: 11400000, guid: 59c6a3e217954ee46aaae4a0e7cc549a, type: 2}
+  speakerFontSize: 42
+  answerFontSize: 27
 --- !u!222 &525681515
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2275,29 +2310,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3e63b67f61bb4894bad2e9f377c55a37, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SimpleDialogueRunner
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueRunner
   emotions: {fileID: 0}
-  panel: {fileID: 525681512}
-  speakerText: {fileID: 2013800984}
-  speakerBackdrops: {fileID: 1476125632}
-  stackLayout: {fileID: 525681516}
-  answersRoot: {fileID: 815314339}
-  answerButton1: {fileID: 511298142}
-  answerButton2: {fileID: 1531686293}
-  answerButton3: {fileID: 1369487098}
-  answerLabel1: {fileID: 1253749383}
-  answerLabel2: {fileID: 836155615}
-  answerLabel3: {fileID: 805584029}
-  timerFill: {fileID: 1293827104}
-  speakerColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
-  answerIdleColor: {r: 0.62, g: 0.52, b: 0.22, a: 0.95}
-  answerSelectedColor: {r: 0.92, g: 0.82, b: 0.38, a: 1}
-  numberIdleColor: {r: 0.55, g: 0.48, b: 0.22, a: 0.9}
-  numberSelectedColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
-  speakerFont: {fileID: 11400000, guid: d73105629c20b244184ea6cb338f82cb, type: 2}
-  answerFont: {fileID: 11400000, guid: 59c6a3e217954ee46aaae4a0e7cc549a, type: 2}
-  speakerFontSize: 42
-  answerFontSize: 27
+  view: {fileID: 525681517}
   replySeconds: 12
   remarkSeconds: 7
   introEpisode: {fileID: 6272005117644163934, guid: a89fe0b080353f84eb55b4a05fcea4eb, type: 3}
