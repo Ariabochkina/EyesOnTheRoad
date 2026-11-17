@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class DialogueRunner : MonoBehaviour
 {
@@ -19,19 +18,11 @@ public class DialogueRunner : MonoBehaviour
     [SerializeField] float replySeconds = 12f;
     [SerializeField] float remarkSeconds = 7f;
 
-    [Header("Старт")]
-    [SerializeField] DialogueEpisode introEpisode;
-    [SerializeField] float startDelaySeconds = 4f;
-    [SerializeField] bool startAutomatically = true;
-    [SerializeField] Key replayKey = Key.T;
-
     DialogueEpisode episode;
     DialogueLine line;
     int lineIndex;
     float lineSeconds;
     float timeLeft;
-    float startTimer;
-    bool autoStartArmed;
 
     public bool IsOpen => episode != null;
 
@@ -58,28 +49,8 @@ public class DialogueRunner : MonoBehaviour
             view.AnswerConfirmed -= OnAnswerConfirmed;
     }
 
-    void Start()
-    {
-        autoStartArmed = startAutomatically;
-        startTimer = startDelaySeconds;
-    }
-
     void Update()
     {
-        if (autoStartArmed)
-        {
-            startTimer -= Time.deltaTime;
-            if (startTimer <= 0f)
-            {
-                autoStartArmed = false;
-                Play(introEpisode);
-            }
-        }
-
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard[replayKey].wasPressedThisFrame && !IsOpen)
-            Play(introEpisode);
-
         if (line == null)
             return;
 

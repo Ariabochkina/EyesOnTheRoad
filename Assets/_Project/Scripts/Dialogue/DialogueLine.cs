@@ -20,8 +20,9 @@ public class DialogueLine
     [Header("Молчание")]
     public float silenceAffinity;
     public float silenceTension;
+    public List<string> silenceFlags = new List<string>();
 
-    [Tooltip("0 - время из настроек Simple Dialogue Runner")]
+    [Tooltip("0 - время из настроек Dialogue Runner")]
     public float seconds;
 
     public int AnswerCount => answers == null ? 0 : Mathf.Min(answers.Count, MaxAnswers);
@@ -50,6 +51,15 @@ public class DialogueLine
         DialogueAnswer answer = answers[index];
         return new Vector2(answer.affinity, answer.tension);
     }
+
+    public List<string> FlagsFor(DialogueRunner.Choice choice)
+    {
+        int index = (int)choice;
+        if (choice == DialogueRunner.Choice.Silence || index >= AnswerCount)
+            return silenceFlags;
+
+        return answers[index].flags;
+    }
 }
 
 [System.Serializable]
@@ -58,4 +68,5 @@ public class DialogueAnswer
     public string text;
     public float affinity;
     public float tension;
+    public List<string> flags = new List<string>();
 }

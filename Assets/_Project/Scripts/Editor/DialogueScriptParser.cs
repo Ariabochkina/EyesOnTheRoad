@@ -16,12 +16,14 @@ public class DialogueScriptParser
     static readonly Regex SilencePattern = new Regex(@"^молчание\s*(.*)$", RegexOptions.IgnoreCase);
     static readonly Regex TimerPattern = new Regex(@"^таймер\s+([0-9]+(?:[.,][0-9]+)?)\s*$", RegexOptions.IgnoreCase);
     static readonly Regex VariantPattern = new Regex(@"^(близость|привязанность|безразличие|враждебность)\s*:\s*(.*)$", RegexOptions.IgnoreCase);
+    static readonly Regex FlagPattern = new Regex(@"^флаг\s+(.+)$", RegexOptions.IgnoreCase);
 
     public readonly List<ParsedEpisode> Episodes = new List<ParsedEpisode>();
     public readonly List<string> Errors = new List<string>();
 
     ParsedEpisode episode;
     DialogueLine line;
+    List<string> flagTarget;
     bool continuesText;
     int rowNumber;
 
@@ -88,6 +90,7 @@ public class DialogueScriptParser
     void StartEpisode(string name)
     {
         line = null;
+        flagTarget = null;
         continuesText = false;
 
         if (name.Length == 0)
@@ -114,6 +117,7 @@ public class DialogueScriptParser
 
         line = new DialogueLine { text = row };
         episode.lines.Add(line);
+        flagTarget = null;
         continuesText = true;
     }
 
@@ -141,6 +145,7 @@ public class DialogueScriptParser
                 line.silenceAffinity = affinity;
                 line.silenceTension = tension;
             }
+            flagTarget = line.silenceFlags;
             return;
         }
 
@@ -148,6 +153,13 @@ public class DialogueScriptParser
         if (match.Success)
         {
             AddAnswer(int.Parse(match.Groups[1].Value), match.Groups[2].Value.Trim());
+            return;
+        }
+
+        match = FlagPattern.Match(row);
+        if (match.Success)
+        {
+            AddFlags(match.Groups[1].Value);
             return;
         }
 
@@ -205,6 +217,23 @@ public class DialogueScriptParser
 
         answer.text = body;
         line.answers.Add(answer);
+        flagTarget = answer.flags;
+    }
+
+    void AddFlags(string list)
+    {
+        if (flagTarget == null)
+        {
+            Error("флаг пишется под ответом или под «молчание»");
+            return;
+        }
+
+        foreach (string part in list.Split(','))
+        {
+            string flag = part.Trim();
+            if (flag.Length > 0 && !flagTarget.Contains(flag))
+                flagTarget.Add(flag);
+        }
     }
 
     bool TryParseShift(string bracket, out float affinity, out float tension)

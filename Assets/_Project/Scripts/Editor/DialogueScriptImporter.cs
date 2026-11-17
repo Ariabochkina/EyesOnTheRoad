@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
-[ScriptedImporter(1, "dialogue")]
+[ScriptedImporter(2, "dialogue")]
 public class DialogueScriptImporter : ScriptedImporter
 {
     const string Template =
